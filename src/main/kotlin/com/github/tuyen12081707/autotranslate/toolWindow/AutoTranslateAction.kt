@@ -17,34 +17,42 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import javax.xml.parsers.DocumentBuilderFactory
-import kotlin.collections.iterator
 
 class AutoTranslateAction : AnAction() {
 
-    // Danh sách ngôn ngữ giống hệt file Python của bạn
     private val TARGET_LANGUAGES = listOf("de", "es", "fr", "hi", "in", "it", "ja", "ko", "pt")
 
+    @Volatile
+    private var isProcessing = false
+
     override fun actionPerformed(e: AnActionEvent) {
-        val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE)
+        if (isProcessing) return
+
+        var virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE)
+        val psiFile = e.getData(CommonDataKeys.PSI_FILE)
+
+        if (virtualFile == null && psiFile != null) {
+            virtualFile = psiFile.virtualFile
+        }
+
         val project = e.project ?: return
 
-        if (virtualFile == null || virtualFile.name != "strings.xml") {
-            Messages.showErrorDialog("Vui lòng click chuột phải vào file strings.xml", "Lỗi File")
+        if (virtualFile == null || !virtualFile.name.contains("strings")) {
+            Messages.showWarningDialog("Vui lòng click chuột phải chính xác vào file strings.xml (hoặc nội dung bên trong file)", "Sai Vị Trí")
             return
         }
 
-        // Thư mục 'values' chứa file strings.xml gốc
-        val valuesDir = virtualFile.parent
-        // Thư mục 'res'
-        val resDir = valuesDir.parent
 
-        // 📍 BẮT ĐẦU CHẠY NGẦM (BACKGROUND TASK) ĐỂ KHÔNG ĐƠ ANDROID STUDIO
+        val valuesDir = virtualFile.parent
+        val resDir = valuesDir?.parent ?: return
+
+        isProcessing = true
+
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Đang Dịch Auto Translate...", false) {
             override fun run(indicator: ProgressIndicator) {
                 try {
                     indicator.text = "Đang đọc file gốc..."
 
-                    // 1. Đọc strings gốc
                     val baseStrings = parseXmlToMap(virtualFile)
                     if (baseStrings.isEmpty()) {
                         ApplicationManager.getApplication().invokeLater {
@@ -55,64 +63,73 @@ class AutoTranslateAction : AnAction() {
 
                     var totalAdded = 0
 
-                    // Lặp qua từng ngôn ngữ
                     for ((index, lang) in TARGET_LANGUAGES.withIndex()) {
                         indicator.text = "Đang dịch sang ngôn ngữ: $lang (${index + 1}/${TARGET_LANGUAGES.size})"
                         indicator.fraction = index.toDouble() / TARGET_LANGUAGES.size
 
                         val targetDirName = "values-$lang"
-                        // Tạo hoặc lấy thư mục values-xx và strings.xml tương ứng (Phải bọc trong Read/Write Action)
                         val targetMap = mutableMapOf<String, String>()
 
-                        // Lấy thư mục và file XML mục tiêu nếu có
                         val targetDir = resDir.findChild(targetDirName)
                         val targetFile = targetDir?.findChild("strings.xml")
 
+                        // 📍 1. ĐỌC NỘI DUNG GỐC CỦA FILE (DẠNG TEXT) ĐỂ GIỮ NGUYÊN FORMAT/COMMENT
+                        var existingFileContent = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n</resources>"
+
                         if (targetFile != null && targetFile.exists()) {
                             targetMap.putAll(parseXmlToMap(targetFile))
+                            existingFileContent = String(targetFile.contentsToByteArray(), Charsets.UTF_8)
                         }
 
-                        // Kiểm tra từ nào chưa dịch
                         val missingKeys = baseStrings.keys.filter { !targetMap.containsKey(it) }
                         if (missingKeys.isEmpty()) continue
 
-                        // Bắt đầu gọi API dịch
+                        // 📍 2. CHỈ TẠO CHUỖI XML MỚI CHO NHỮNG TỪ BỊ THIẾU
+                        val newStringsBuilder = StringBuilder()
+
                         for (key in missingKeys) {
                             val originalText = baseStrings[key] ?: continue
                             try {
                                 indicator.text2 = "Đang dịch key: $key"
                                 val translatedText = callGoogleTranslate(originalText, lang)
                                 val escapedText = escapeAndroidText(translatedText)
-                                targetMap[key] = escapedText
+
+                                newStringsBuilder.append("    <string name=\"$key\">$escapedText</string>\n")
                                 totalAdded++
 
-                                // Ngủ 1 chút để tránh Google block IP vì spam (Rate limit)
-                                Thread.sleep(200)
+                                // 📍 Nghỉ 500ms để Google không block IP
+                                Thread.sleep(500)
                             } catch (ex: Exception) {
                                 ex.printStackTrace()
                             }
                         }
 
-                        // 📍 LƯU FILE MỚI: Phải gọi qua WriteCommandAction trên Main Thread
-                        ApplicationManager.getApplication().invokeAndWait {
-                            WriteCommandAction.runWriteCommandAction(project) {
-                                try {
-                                    // Tạo thư mục nếu chưa có
-                                    val dir = resDir.findChild(targetDirName) ?: resDir.createChildDirectory(this, targetDirName)
-                                    // Tạo file nếu chưa có
-                                    val file = dir.findChild("strings.xml") ?: dir.createChildData(this, "strings.xml")
+                        // 📍 3. NHÉT CÁC CHUỖI MỚI VÀO TRƯỚC THẺ </resources> CỦA FILE CŨ
+                        if (newStringsBuilder.isNotEmpty()) {
+                            ApplicationManager.getApplication().invokeAndWait {
+                                WriteCommandAction.runWriteCommandAction(project) {
+                                    try {
+                                        val dir = resDir.findChild(targetDirName) ?: resDir.createChildDirectory(this, targetDirName)
+                                        val file = dir.findChild("strings.xml") ?: dir.createChildData(this, "strings.xml")
 
-                                    // Build nội dung XML
-                                    val xmlContent = buildXmlString(targetMap)
-                                    file.setBinaryContent(xmlContent.toByteArray(Charsets.UTF_8))
-                                } catch (ex: Exception) {
-                                    ex.printStackTrace()
+                                        val endTagIndex = existingFileContent.lastIndexOf("</resources>")
+                                        val updatedContent = if (endTagIndex != -1) {
+                                            // Cắt file ra nhét chuỗi mới vào giữa
+                                            existingFileContent.substring(0, endTagIndex) + newStringsBuilder.toString() + existingFileContent.substring(endTagIndex)
+                                        } else {
+                                            // Đề phòng file lỗi không có thẻ đóng
+                                            existingFileContent + "\n" + newStringsBuilder.toString() + "\n</resources>"
+                                        }
+
+                                        file.setBinaryContent(updatedContent.toByteArray(Charsets.UTF_8))
+                                    } catch (ex: Exception) {
+                                        ex.printStackTrace()
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // Thông báo hoàn tất
                     ApplicationManager.getApplication().invokeLater {
                         Messages.showInfoMessage("Đã thêm $totalAdded chuỗi mới!", "Dịch Thành Công")
                     }
@@ -123,19 +140,23 @@ class AutoTranslateAction : AnAction() {
                     }
                 }
             }
+
+            override fun onFinished() {
+                isProcessing = false
+            }
         })
     }
 
     override fun update(e: AnActionEvent) {
-        // Tạm thời tắt hết mọi điều kiện check để ÉP NÓ HIỂN THỊ ra đã!
-        e.presentation.isEnabledAndVisible = true
+        // 📍 ÉP HIỂN THỊ Ở MỌI NƠI! Không thèm check tên file hay đường dẫn nữa.
+        // Chỉ mờ đi khi đang bận dịch (isProcessing = true)
+        e.presentation.isVisible = true
+        e.presentation.isEnabled = !isProcessing
     }
-
     // ==========================================
     // CÁC HÀM TIỆN ÍCH HỖ TRỢ
     // ==========================================
 
-    // Hàm đọc file XML thành Map<Key, Text>
     private fun parseXmlToMap(file: VirtualFile): Map<String, String> {
         val map = mutableMapOf<String, String>()
         try {
@@ -146,7 +167,6 @@ class AutoTranslateAction : AnAction() {
 
             for (i in 0 until nodes.length) {
                 val element = nodes.item(i) as Element
-                // Bỏ qua các string có cờ translatable="false"
                 if (element.getAttribute("translatable") == "false") continue
 
                 val name = element.getAttribute("name")
@@ -161,19 +181,25 @@ class AutoTranslateAction : AnAction() {
         return map
     }
 
-    // Hàm gọi API Google Translate (Miễn phí)
     private fun callGoogleTranslate(text: String, targetLang: String): String {
         val encodedText = URLEncoder.encode(text, "UTF-8")
-        val urlStr = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLang&dt=t&q=$encodedText"
+        val urlStr = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=$targetLang&dt=t&q=$encodedText"
 
         val connection = URL(urlStr).openConnection() as HttpURLConnection
         connection.requestMethod = "GET"
         connection.setRequestProperty("User-Agent", "Mozilla/5.0")
 
+        // 📍 FIX KẸT TIẾN TRÌNH: Thêm Timeout 5 giây
+        connection.connectTimeout = 5000
+        connection.readTimeout = 5000
+
+        val responseCode = connection.responseCode
+        if (responseCode != 200) {
+            throw RuntimeException("Google Error: $responseCode")
+        }
+
         val response = InputStreamReader(connection.inputStream, Charsets.UTF_8).use { it.readText() }
 
-        // Response trả về là 1 array JSON phức tạp, ví dụ: [[["Chào","Hello",...], [" bạn"," you",...]]]
-        // Ta dùng JsonParser có sẵn của IntelliJ để bóc tách
         val jsonArray = JsonParser.parseString(response).asJsonArray
         val sentencesArray = jsonArray.get(0).asJsonArray
 
@@ -185,25 +211,9 @@ class AutoTranslateAction : AnAction() {
         return resultBuilder.toString()
     }
 
-    // Hàm xử lý ký tự y hệt bên Python
     private fun escapeAndroidText(text: String): String {
         return text.replace("'", "\\'")
             .replace("\"", "\\\"")
-            .replace("\n", "\\n") // Fix luôn lỗi xuống dòng XML
-    }
-
-    // Build cấu trúc file strings.xml từ Map
-    private fun buildXmlString(map: Map<String, String>): String {
-        val sb = java.lang.StringBuilder()
-        sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
-        sb.append("<resources>\n")
-
-        // Sort lại cho đẹp (tuỳ chọn)
-        for ((key, value) in map.toSortedMap()) {
-            sb.append("    <string name=\"$key\">$value</string>\n")
-        }
-
-        sb.append("</resources>")
-        return sb.toString()
+            .replace("\n", "\\n")
     }
 }
