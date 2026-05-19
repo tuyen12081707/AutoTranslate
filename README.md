@@ -1,45 +1,40 @@
-# AutoTranslate
+# Auto Translate Strings
 
 ![Build](https://github.com/tuyen12081707/AutoTranslate/workflows/Build/badge.svg)
-[![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
-[![Downloads](https://img.shields.io/jetbrains/plugin/d/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 
-## Template ToDo list
-- [x] Create a new [IntelliJ Platform Plugin Template][template] project.
-- [ ] Get familiar with the [template documentation][template].
-- [ ] Adjust the [group](./gradle.properties), as well as the [id](./src/main/resources/META-INF/plugin.xml), [name](./src/main/resources/META-INF/plugin.xml), and [sources package](./src/main/kotlin).
-- [ ] Adjust the plugin [description](./src/main/resources/META-INF/plugin.xml) (see [Tips][docs:plugin-description]) and this README to describe what your plugin does.
-- [ ] Review the [Legal Agreements](https://plugins.jetbrains.com/docs/marketplace/legal-agreements.html?from=IJPluginTemplate).
-- [ ] [Publish a plugin manually](https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html?from=IJPluginTemplate) for the first time.
-- [ ] Set the `MARKETPLACE_ID` in the above README badges. You can obtain it once the plugin is published to JetBrains Marketplace.
-- [ ] Set the [Plugin Signing](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html?from=IJPluginTemplate) related [secrets](https://github.com/JetBrains/intellij-platform-plugin-template#environment-variables).
-- [ ] Set the [Deployment Token](https://plugins.jetbrains.com/docs/marketplace/plugin-upload.html?from=IJPluginTemplate).
-- [ ] Click the <kbd>Watch</kbd> button on the top of the [IntelliJ Platform Plugin Template][template] to be notified about releases containing new features and fixes.
+**Auto Translate Strings** is a powerful and essential plugin for Android developers working in Android Studio and IntelliJ IDEA. It helps you automatically translate your base `strings.xml` file into multiple target languages with just a single click.
 
-This Fancy IntelliJ Platform Plugin is going to be your implementation of the brilliant ideas that you have.
+## ✨ Features
 
-## Installation
+- **🚀 1-Click Translation:** Right-click on your `strings.xml` file or anywhere inside the editor and select "Auto Translate Strings" to start the magic.
+- **🌍 Multi-Language Support:** Automatically generates translations for popular languages (German, Spanish, French, Hindi, Indonesian, Italian, Japanese, Korean, Portuguese).
+- **🛡️ Safe & Smart:** Only translates missing keys. If you already have existing translations, it will safely skip them.
+- **📝 Preserves Formatting:** Appends new strings directly to your XML files without messing up your existing layout, comments, or XML tags.
+- **⚡ Background Processing:** Runs asynchronously with a native IDE progress bar, ensuring your Android Studio never freezes during the translation process.
+- **🔒 Anti-Spam Lock:** Automatically prevents multiple accidental clicks while a translation task is running.
 
-- Using the IDE built-in plugin system:
+## 🚀 Usage
 
-  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>Marketplace</kbd> > <kbd>Search for "AutoTranslate"</kbd> >
-  <kbd>Install</kbd>
+1. Open your Android project in Android Studio / IntelliJ IDEA.
+2. Locate your base English `strings.xml` file (inside the `res/values/` directory).
+3. **Right-click** on the file in the Project tree (or right-click directly inside the code editor).
+4. Select **Auto Translate Strings** from the context menu.
+5. Sit back and watch the progress bar as your app becomes multilingual!
 
-- Using JetBrains Marketplace:
+## 📦 Installation
 
-  Go to [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID) and install it by clicking the <kbd>Install to ...</kbd> button in case your IDE is running.
+- **Using the IDE built-in plugin system:**
+  Go to <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>Marketplace</kbd> > Search for `"Auto Translate Strings"` > <kbd>Install</kbd>.
 
-  You can also download the [latest release](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID/versions) from JetBrains Marketplace and install it manually using
-  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
+- **Manual Installation:**
+  1. Download the latest `.zip` release from the [Releases](https://github.com/tuyen12081707/AutoTranslate/releases) page.
+  2. Go to <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
+  3. Select the downloaded `.zip` file and restart your IDE.
 
-- Manually:
-
-  Download the [latest release](https://github.com/tuyen12081707/AutoTranslate/releases/latest) and install it manually using
-  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
-
+## 🛠️ Tech Stack
+- Kotlin
+- IntelliJ Platform SDK
+- Google Translate API
 
 ---
-Plugin based on the [IntelliJ Platform Plugin Template][template].
-
-[template]: https://github.com/JetBrains/intellij-platform-plugin-template
-[docs:plugin-description]: https://plugins.jetbrains.com/docs/intellij/plugin-user-experience.html#plugin-description-and-presentation
+*Developed with ❤️ to boost Android Development productivity.*
