@@ -1,6 +1,6 @@
 import org.jetbrains.intellij.platform.gradle.extensions.intellijPlatform
 
-rootProject.name = "Auto Translate plugin:"
+rootProject.name = "AutoTranslate"
 
 pluginManagement {
     plugins {
