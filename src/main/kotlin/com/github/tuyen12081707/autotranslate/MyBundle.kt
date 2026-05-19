@@ -1,4 +1,4 @@
-package org.jetbrains.plugins.template
+package com.github.tuyen12081707.autotranslate
 
 import com.intellij.DynamicBundle
 import org.jetbrains.annotations.NonNls
