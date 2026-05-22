@@ -9,9 +9,22 @@ plugins {
 dependencies {
     testImplementation("junit:junit:4.13.2")
 
-    // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
+    // IntelliJ Platform Gradle Plugin Dependencies Extension
     intellijPlatform {
-        intellijIdea("2025.2.6.2")
+        // Dùng 2024.1.1 (Mã 241) để tương thích với Android Studio của bạn (Mã 251)
+        intellijIdea("2024.1.1")
         testFramework(TestFrameworkType.Platform)
+    }
+}
+
+intellijPlatform {
+    pluginConfiguration {
+        ideaVersion {
+            // Mở khóa cho các bản IDE từ 2024.1 (Mã 241) trở lên
+            sinceBuild.set("241")
+
+            // Để trống để không giới hạn trần, thoải mái chạy trên IDE tương lai
+            untilBuild.set("")
+        }
     }
 }

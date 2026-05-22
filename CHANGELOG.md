@@ -12,6 +12,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.3] - 2026-05-22
+### Added
+- 🛑 **Task Cancellation:** Added support for the Cancel (X) button on the IDE progress bar. You can now instantly abort an ongoing background translation process without freezing or restarting Android Studio.
+- 📁 **Dynamic File Support:** The plugin now supports and correctly generates both `strings.xml` and `string.xml` based on the source file clicked.
+
+### Fixed
+- 🧩 **Preserved XML/HTML Structure:** Replaced the DOM parser with a custom Regex parser. HTML tags (e.g., `<b>`, `<i>`) and `<![CDATA[...]]>` blocks inside strings are no longer stripped out during the read process.
+- 🐛 **Android Placeholder Fix:** Resolved a critical issue where the translation API would inject invalid spaces into Android format specifiers (e.g., breaking `%1$s` into `% 1 $ s`). Placeholders are now automatically sanitized and restored.
+- 🛡️ **XML Entity Escaping:** Fixed XML syntax errors in the generated output by ensuring special characters (`&`, `<`, `>`) returned from the translation API are properly escaped as `&amp;`, `&lt;`, and `&gt;`.
+
 ## [0.0.2] - 2026-05-21
 ### Added
 - 🛑 **Task Cancellation:** Added support for the Cancel (X) button on the IDE progress bar. You can now instantly abort an ongoing background translation process without freezing or restarting Android Studio.
