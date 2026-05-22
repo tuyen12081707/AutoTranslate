@@ -13,7 +13,7 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
-import java.net.URL
+import java.net.URI
 import java.net.URLEncoder
 
 class AutoTranslateAction : AnAction() {
@@ -229,8 +229,8 @@ class AutoTranslateAction : AnAction() {
     private fun callGoogleTranslate(text: String, targetLang: String): String {
         val encodedText = URLEncoder.encode(text, "UTF-8")
         val urlStr = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=$targetLang&dt=t&q=$encodedText"
-
-        val connection = URL(urlStr).openConnection() as HttpURLConnection
+        val url = URI.create(urlStr).toURL()
+        val connection = url.openConnection() as HttpURLConnection
         connection.requestMethod = "GET"
         connection.setRequestProperty("User-Agent", "Mozilla/5.0")
         connection.connectTimeout = 5000
