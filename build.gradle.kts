@@ -20,11 +20,7 @@ dependencies {
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
-            // Mở khóa cho các bản IDE từ 2024.1 (Mã 241) trở lên
             sinceBuild.set("241")
-
-            // Để trống để không giới hạn trần, thoải mái chạy trên IDE tương lai
-            untilBuild.set("")
         }
     }
 }
